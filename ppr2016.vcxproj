@@ -107,6 +107,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>lib\sqlite3\include;$(TBB_CONFIG)\include;</AdditionalIncludeDirectories>
+      <WarningLevel>Level1</WarningLevel>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>lib\sqlite3\lib;$(TBB_CONFIG)\lib\intel64\vc14;</AdditionalLibraryDirectories>
@@ -118,6 +119,8 @@
     <ClCompile Include="src\approx\src\CommonApprox.cpp" />
     <ClCompile Include="src\approx\src\CubicSpline.cpp" />
     <ClCompile Include="src\approx\src\GlucoseLevels.cpp" />
+    <ClCompile Include="src\approx\src\Masker.cpp" />
+    <ClCompile Include="src\approx\src\Statistics.cpp" />
     <ClCompile Include="src\common\iface\ApproxIface.cpp" />
     <ClCompile Include="src\common\rtl\referencedImpl.cpp" />
   </ItemGroup>
@@ -125,6 +128,8 @@
     <ClInclude Include="src\approx\src\CommonApprox.h" />
     <ClInclude Include="src\approx\src\CubicSpline.h" />
     <ClInclude Include="src\approx\src\GlucoseLevels.h" />
+    <ClInclude Include="src\approx\src\Masker.h" />
+    <ClInclude Include="src\approx\src\Statistics.h" />
     <ClInclude Include="src\common\iface\ApproxIface.h" />
     <ClInclude Include="src\common\iface\referencedIface.h" />
     <ClInclude Include="src\common\rtl\cfixes.h" />
