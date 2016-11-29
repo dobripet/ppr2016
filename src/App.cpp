@@ -2,6 +2,8 @@
 #include "common\iface\ApproxIface.h"
 #include "approx\src\GlucoseLevels.h"
 #include "approx\src\CubicSpline.h"
+#include "approx\src\QuadraticSpline.h"
+#include "approx\src\AkimaSpline.h"
 #include "approx\src\Masker.h"
 #include "approx\src\Statistics.h"
 #include <stdio.h>
@@ -91,6 +93,7 @@ int wrapper() {
 
 
 
+			printf("segment_id: %s\n", segmentIds[i].c_str());
 			processSegment(segment);
 
 			segment->Release();
@@ -162,22 +165,52 @@ HRESULT processSegment(CGlucoseLevels *segment) {
 	/*process all mask for all methods*/
 	CGlucoseLevels *gl;// = new CGlucoseLevels();
 	//gl->AddRef();
+	std::map<floattype, floattype> derivations;
 	for (int mask = 255; mask > 0; mask--) {
-		masker->GetLevels(mask, (IGlucoseLevels **)&gl);
 		//test->GetLevelsCount(&ss);
 		//printf("ssacek %d\n", ss);
+		masker->GetLevels(mask, (IGlucoseLevels **)&gl);
 		CCubicSpline *cubic = new CCubicSpline(gl);
+		CQuadraticSpline *quadra = new CQuadraticSpline(gl);
+		CAkimaSpline *akima = new CAkimaSpline(gl);
 		/*dont need params*/
 		cubic->Approximate(nullptr);
+		quadra->Approximate(nullptr);
+		akima->Approximate(nullptr);
+		printf("\tmask: %#X\n", mask);
+		if (mask == 255) {
+			size_t size;
+			gl->GetLevelsCount(&size);
+			TGlucoseLevel *ptr;
+			gl->GetLevels(&ptr);
+			//printf("vel: %d\n", size);
+			for (size_t i = 0; i < size; i++) {
+				floattype value;
+				size_t filled;
+				if (cubic->GetLevels(ptr[i].datetime, 0, 1, &value, &filled, 1) == S_OK && filled == 1) {
+					//printf("mask: %d %f %f\n", i, ptr[i].datetime, value);
+					derivations.insert(std::pair<floattype, floattype>(ptr[i].datetime, value));					
+				}
+				else {
+				}
+			}
+		}	
+
+
 		//TODO getlevels zavola statisticky nastroj presne pro casy z masky 255
 		floattype *levels = (floattype*)malloc(10 * sizeof(floattype));
 		size_t filled;
 		//printf("awtffasfaf\n");
-		cubic->GetLevels(36525, 0.1, 1, levels, &filled, 0);
-		printf("filled je %lu a hodnota %f\n", filled, levels[0]);
-		stats->GetStats(cubic);
+		//cubic->GetLevels(36525, 0.1, 1, levels, &filled, 0);
+		//printf("filled je %lu a hodnota %f\n", filled, levels[0]);
+		//size_t size;
+		//gl->GetLevelsCount(&size);
+		//printf("mask: %lu\n", size);
+		//stats->GetStats(cubic, derivations, mask);
 		free(levels);
 		delete cubic;
+		delete quadra;
+		delete akima;
 		//delete gl;
 
 	}
