@@ -30,6 +30,11 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 	else {
 		t[count - 1] = (abs(m[count] - m[count - 1])*m[count - 2] + abs(m[count - 2] - m[count - 3])*m[count - 1]) / (abs(m[count] - m[count - 1]) + abs(m[count - 2] - m[count - 3]));
 	}
+	//slopes
+	for (size_t i = count - 2; i > 1; i--) {
+		//m{i} = (y{i+1}-y{i})/(x{i+1}-x{i})
+		m[i - 2] = (levels[i - 1].level - levels[i - 2].level) / levels[i - 1].datetime - levels[i - 2].datetime;
+	}
 	for (size_t i = count-2; i > 1; i--) {
 		//zero check, not a function
 		if (levels[i + 1].datetime == levels[i].datetime) {
@@ -37,22 +42,23 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 		}
 		floattype dx = levels[i + 1].datetime - levels[i].datetime;
 		//m{i} = (y{i+1}-y{i})/(x{i+1}-x{i})
-		m[i] = (levels[i + 1].level - levels[i].level) / dx;
+		m[i - 2] = (levels[i - 1].level - levels[i - 2].level) / levels[i - 1].datetime - levels[i - 2].datetime;
+		//m[i] = (levels[i + 1].level - levels[i].level) / dx;
 		//zero check
 		if (m[i+1] == m[i] && m[i-1] == m[i-2]) {
 			t[i] = 0.5 * (m[i] + m[i-1]);
 		}
 		else {
 			//t{i} = (abs(m{i + 1} - m{i})*m{i - 1} + abs(m{i - 1} - m{i - 2})*m{i}) / (abs(m{i + 1} - m{i}) + abs(m{i - 1} - m{i - 2}))
-			t[i] = (abs(m[i+1] - m[i])*m[i-1] + abs(m[i-1] - m[i-2])*m[i]) / (abs(m[i + 1] - m[i]) + abs(m[i - 1] - m[i - 2]));
+			t[i] = (abs(m[i + 1] - m[i])*m[i - 1] + abs(m[i - 1] - m[i - 2])*m[i]) / (abs(m[i + 1] - m[i]) + abs(m[i - 1] - m[i - 2]));;
 		}
 		//a{i} is y{i}, b{i} is t{i}, c{i} is (3 * m{i} - 2 * t{i} - t{i+1}) / (x{i+1} -x{i}) and d{i} is (t{i} + t{i+1} - 2*m{i}) / (x{i+1} -x{i})^2
 		aParams.insert(std::pair<floattype, akima_params>(levels[i].datetime, akima_params(levels[i].level, t[i],
-			(3*m[i]-2*t[i]-t[i+1])/dx,( t[i] + t[i + 1]-2*m[i])/(dx*dx))));
+			(3 * m[i] - 2 * t[i] - t[i + 1]) / dx, (t[i] + t[i + 1] - 2 * m[i]) / (dx*dx))));
 	}
 	//boundary values
-	m[0] = (levels[1].level - levels[0].level) / (levels[1].datetime - levels[0].datetime);
-	m[1] = (levels[2].level - levels[1].level) / (levels[2].datetime - levels[1].datetime);
+	//m[0] = (levels[1].level - levels[0].level) / (levels[1].datetime - levels[0].datetime);
+	//m[1] = (levels[2].level - levels[1].level) / (levels[2].datetime - levels[1].datetime);
 	//m{-1} = 2m{0} - 2m{1}
 	floattype mm1 = 2 * m[0] - m[1];
 	//m{-2} = 2m{-1} - m{0}
