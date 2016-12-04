@@ -1,6 +1,7 @@
 #include "Statistics.h"
 #include "CubicSpline.h"
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <algorithm> 
 
@@ -10,7 +11,7 @@ HRESULT CStatistics::printStats(floattype mean, floattype absMin, floattype absF
 	floattype relMax, floattype relStandardDeviation, unsigned int mask) {
 	return S_OK;
 }
-HRESULT CStatistics::getStatsForMask(floattype *absMean,floattype *absMin, floattype *absFirstQ, floattype *absMedian, floattype *absThirdQ, floattype *absMax,
+HRESULT CStatistics::getStatsForMask(floattype *absMean, floattype *absMin, floattype *absFirstQ, floattype *absMedian, floattype *absThirdQ, floattype *absMax,
 	floattype *absStandardDeviation, floattype *relMean, floattype *relMin, floattype *relFirstQ, floattype *relMedian, floattype *relThirdQ,
 	floattype *relMax, floattype *relStandardDeviation, IApproximatedGlucoseLevels *method, unsigned int mask, int derivation, std::map<floattype, floattype> derivations) {
 	//printf("maska je %u", mask);
@@ -24,14 +25,17 @@ HRESULT CStatistics::getStatsForMask(floattype *absMean,floattype *absMin, float
 	levels->GetLevelsCount(&size);
 	TGlucoseLevel *ptr;
 	levels->GetLevels(&ptr);
-	//std::ofstream file;
-	//file.open("C:/Users/Petr/Dropbox/Skola/PPR/semestralka/ppr2016/data/output.csv", std::ios::trunc);
-	//file.precision(5);
-	//file << "date" << ", " << "calc" << ", " << "real" << "\n";
+	std::ofstream file;
+	//if (mask == 1) {
+		file.open("C:/Users/Petr/Dropbox/Skola/PPR/semestralka/ppr2016/data/output.csv", std::ios::trunc);
+		file.precision(5);
+		file << "mask:" << mask <<std::endl;
+		file << "date" << ", " << "calc" << ", " << "real" << "\n";
+	//}
 	for (size_t i = 0; i < size; i++) {
 		int mod = i % 8;
 		//get value for mask
-		if ((mask >> (7 - mod)) & 1) {	
+		if ((mask >> (7 - mod)) & 1) {
 			floattype value;
 			size_t filled;
 			if (derivation == 0) {
@@ -40,7 +44,7 @@ HRESULT CStatistics::getStatsForMask(floattype *absMean,floattype *absMin, float
 					floattype relerr = err / ptr[i].level;
 					absError.push_back(err);
 					relError.push_back(relerr);
-					//file << (ptr[i].datetime - 36500.) << ", " << value << ", " << ptr[i].level << "\n";
+					file << (ptr[i].datetime - ptr[0].datetime) << ", " << value << ", " << ptr[i].level << "\n";
 					absSum += err;
 					absSumsq += err * err;
 					relSum += relerr;
@@ -48,13 +52,13 @@ HRESULT CStatistics::getStatsForMask(floattype *absMean,floattype *absMin, float
 				}
 			}
 			//first order derivation
-			else if(derivation == 1){
+			else if (derivation == 1) {
 				if (method->GetLevels(ptr[i].datetime, 0, 1, &value, &filled, 1) == S_OK && filled == 1) {
 					floattype err = abs(value - derivations[ptr[i].datetime]);
 					absError.push_back(err);
-					//file << (ptr[i].datetime - 36500.) << ", " << value << ", " << ptr[i].level << "\n";
+					file << (ptr[i].datetime - ptr[0].datetime) << ", " << value << ", " << derivations[ptr[i].datetime] << "\n";
 					absSum += err;
-					absSumsq += err * err;					
+					absSumsq += err * err;
 				}
 			}
 
@@ -74,7 +78,9 @@ HRESULT CStatistics::getStatsForMask(floattype *absMean,floattype *absMin, float
 		*relMean = relSum / size;
 		*relStandardDeviation = sqrt((relSumsq - (((*relMean)*(*relMean)) / size)) / size);//sqrt from variance
 	}
-	//file.close();
+	if (mask == 1){
+		file.close();
+	}
 	return S_OK;
 }
 HRESULT CStatistics::getQuartils(floattype *min, floattype *firstQ, floattype *median, floattype *thirdQ, floattype *max, std::vector<floattype> error) {
@@ -134,7 +140,7 @@ HRESULT CStatistics::getQuartils(floattype *min, floattype *firstQ, floattype *m
 CStatistics::CStatistics(IGlucoseLevels *levels) : levels(levels) {
 	if (levels != NULL) levels->AddRef();
 }
-HRESULT CStatistics::GetStats(IApproximatedGlucoseLevels *method, std::map<floattype, floattype> derivations, unsigned int mask){
+HRESULT CStatistics::GetStats(IApproximatedGlucoseLevels *method, std::map<floattype, floattype> derivations, unsigned int mask, std::string *result){
 	if (levels == NULL || method == NULL) {
 		return S_FALSE;
 	}
@@ -154,44 +160,69 @@ HRESULT CStatistics::GetStats(IApproximatedGlucoseLevels *method, std::map<float
 	floattype absMean = 0.;
 	floattype relMean = 0.;
 	//get stats for all points
-	printf("\t\tall concentrations\n");
+	char buf[128];
+	std::stringstream ss;
+	/*ss << "\t\t\tall concentrations\n";
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
 		&relFirstQ, &relMedian, &relThirdQ, &relMax, &relStandardDeviation, method, 255, 0, derivations);
-	printf("\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
-	printf("\t\t\trelative: %f, %f, %f, %f, %f, %f, %f\n", relMean, relMin, relFirstQ, relMedian, relThirdQ, relMax, relStandardDeviation);
-	//get stats for points in mask 0
-	printf("\t\tbit mask 0\n");
+	sprintf(buf, "\t\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
+	ss << buf;
+	sprintf(buf, "\t\t\t\trelative: %f, %f, %f, %f, %f, %f, %f\n", relMean, relMin, relFirstQ, relMedian, relThirdQ, relMax, relStandardDeviation);
+	ss << buf;*/
+	/*//get stats for points in mask 0
+	ss << "\t\t\tbit mask 0\n";
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
 		&relFirstQ, &relMedian, &relThirdQ, &relMax, &relStandardDeviation, method, ((~mask)&0xFF), 0, derivations);
-	printf("\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
-	printf("\t\t\trelative: %f, %f, %f, %f, %f, %f, %f\n", relMean, relMin, relFirstQ, relMedian, relThirdQ, relMax, relStandardDeviation);
+	sprintf(buf, "\t\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
+	ss << buf;
+	sprintf(buf, "\t\t\t\trelative: %f, %f, %f, %f, %f, %f, %f\n", relMean, relMin, relFirstQ, relMedian, relThirdQ, relMax, relStandardDeviation);
+	ss << buf;
 	//get stats for points in mask 1
-	printf("\t\tbit mask 1\n");
+	ss << "\t\t\tbit mask 1\n";
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
 		&relFirstQ, &relMedian, &relThirdQ, &relMax, &relStandardDeviation, method, (mask), 0, derivations);
-	printf("\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
-	printf("\t\t\trelative: %f, %f, %f, %f, %f, %f, %f\n", relMean, relMin, relFirstQ, relMedian, relThirdQ, relMax, relStandardDeviation);
+	sprintf(buf, "\t\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
+	ss << buf;
+	sprintf(buf, "\t\t\t\trelative: %f, %f, %f, %f, %f, %f, %f\n", relMean, relMin, relFirstQ, relMedian, relThirdQ, relMax, relStandardDeviation);
+	ss << buf;
 
-
-	printf("\t\tfirst continuous derivative all concentrations\n");
+	*/
+	ss << "\t\t\tfirst continuous derivative all concentrations\n";
 	//get stats for all points derivation 1
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
 		&relFirstQ, &relMedian, &relThirdQ, &relMax, &relStandardDeviation, method, 255, 1, derivations);
-	printf("\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
-	printf("\t\tfirst continuous derivative bit mask 0\n");
+	sprintf(buf, "\t\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
+	ss << buf;
+	/*ss << "\t\t\tfirst continuous derivative bit mask 0\n";
 	//get stats for points in mask 0 derivation 1
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
 		&relFirstQ, &relMedian, &relThirdQ, &relMax, &relStandardDeviation, method, ((~mask) & 0xFF), 1, derivations);
-	printf("\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
-	printf("\t\tfirst continuous derivative bit mask 1\n");
+	sprintf(buf, "\t\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
+	ss << buf;
+	ss <<"\t\t\tfirst continuous derivative bit mask 1\n";
 	//get stats for points in mask 1 derivation 1
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
 		&relFirstQ, &relMedian, &relThirdQ, &relMax, &relStandardDeviation, method, (mask), 1, derivations);
-	printf("\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
-
+	sprintf(buf, "\t\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
+	ss << buf;*/
+	(*result) = ss.str();
 	return S_OK;
 }
 CStatistics::~CStatistics() {
 	if (levels != NULL) levels->Release();
 }
-
+HRESULT CTimer::start() {
+	FILETIME time;
+	GetSystemTimeAsFileTime(&time);
+	startTime.HighPart = time.dwHighDateTime;
+	startTime.LowPart = time.dwLowDateTime;
+	return S_OK;
+}
+HRESULT CTimer::stop() {
+	FILETIME time;
+	GetSystemTimeAsFileTime(&time);
+	stopTime.HighPart = time.dwHighDateTime;
+	stopTime.LowPart = time.dwLowDateTime;
+	std::cout << "Timer measured: " << (floattype)((stopTime.QuadPart - startTime.QuadPart)) /10000 << "ms" << std::endl;
+	return S_OK;
+}

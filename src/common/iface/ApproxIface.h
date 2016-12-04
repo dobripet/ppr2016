@@ -81,14 +81,9 @@ typedef struct {
 } TAvgExpApproximationParams;
 
 typedef struct {
-	int mask;
-} TMaskApproximationParams;
-
-typedef struct {
 	size_t ApproximationMethod;	// = apxmAverageExponential 
 	union {
 		TAvgExpApproximationParams avgexp;
-		TMaskApproximationParams mask;
 	};
 } TApproximationParams;
 

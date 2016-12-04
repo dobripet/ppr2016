@@ -6,219 +6,210 @@
 #include "approx\src\AkimaSpline.h"
 #include "approx\src\Masker.h"
 #include "approx\src\Statistics.h"
-#include <stdio.h>
+#include <iostream>
+#include <sstream>
 #include <sqlite3.h>
 #include <vector>
 #include <string>
-
-HRESULT processSegment(CGlucoseLevels *segment);
-
-/*Loads segment levels to struct and vector*/
+#include <amp.h> 
+#include <tbb/tbb.h>  
+HRESULT processSegment(int method, CGlucoseLevels *segment);
+HRESULT processMask(int method, int mask, CMasker *masker, std::vector<CCommonApprox*> *instances);
+HRESULT processStats(CMasker *masker, CStatistics *stats, std::vector<CCommonApprox*> *instances, std::vector<std::string> *results);
+HRESULT processStatsMask(int mask, CStatistics *stats, std::map<floattype, floattype> derivations, std::vector<CCommonApprox*> *instances, std::vector<std::string> *results);
+//Loads segment levels to struct and vector
 static int getSegmentLevels(void *glucoseLevels, int argc, char **argv, char **azColName) {
 	std::vector<TGlucoseLevel> *gl = (std::vector<TGlucoseLevel>*)glucoseLevels;
 	TGlucoseLevel val = TGlucoseLevel();
 	val.datetime = atof(argv[0]) - 2415020.5;// Conversion to 1.1.1900
 	val.level = atof(argv[1]);
-	//printf("hodnota: %f %s a cas %f %s\n", val.level, argv[1], val.datetime, argv[0]);
 	gl->push_back(val);	
 	return 0;
 
 }
-/*Loads segment ids to vector*/
+//Loads segment ids to vector
 static int getSegsIds(void *segmentIds, int argc, char **argv, char **azColName) {
 	std::vector<std::string> *segs = (std::vector<std::string>*) segmentIds;
 	segs->push_back(argv[0]);
-	//printf("%s\n", argv[0]);
 	return 0;
 
 }
-/*heler sql*/
-static int getinfo(void *NotUsed, int argc, char **argv, char **azColName) {
-	int i;
-    for (i = 0; i<argc; i++) {
-		     printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-		
+
+int main(int argc, void *argv[]) {
+	int method;
+	if (argc != 3) {
+		std::cerr << "Invalid parameters! Method flags Akima spline: 1, Cubic spline: 2 Quadratic spline: 3. Usage: ppr2016 PATH_TO_DB_FILE METHOD";
+		return 1;
 	}
-	printf("\n");
-	return 0;
-}
-int wrapper();
-
-int main(int argc, void *arrgv[]) {
-	wrapper();
-
-	return 0;
-}
-
-
-int wrapper() {
-	/*Databse handling*/
+	method = atoi((char*)argv[2]);
+	if (method < 1 || method > 3) {
+		std::cerr << "Invalid parameters! Method flags Akima spline: 1, Cubic spline: 2 Quadratic spline: 3. Usage: ppr2016 PATH_TO_DB_FILE METHOD";
+		return 1;
+	}
+#ifdef PARALLEL_AMP
+	//AMP init
+	CTimer *t = new CTimer();
+	t->start();
+	std::wcout << "Default accelerator is now "
+		<< concurrency::accelerator(concurrency::accelerator::default_accelerator).description << "\n";
+	t->stop();
+	delete t;
+#endif
+	//Databse handling
 	sqlite3 *db;
 	char *zErrMsg = 0;
-	int rc;
-	/*TODO dynamic loading from file*/
-	rc = sqlite3_open("C:/Users/Petr/Dropbox/Skola/PPR/semestralka/ppr2016/data/direcnet.sqlite", &db);
-	if (rc) {
-		fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-
-
-		return(0);
+	if (sqlite3_open((char*)argv[1], &db)) {
+		std::cerr << "Can't open database: " << sqlite3_errmsg(db)<< "\n";
+		return 1;
 	}
-	else {
-		//fprintf(stderr, "Opened database successfully\n");
-	}
-
 	std::vector<std::string> segmentIds;
 	sqlite3_exec(db, "SELECT id FROM timesegment", getSegsIds, &segmentIds, &zErrMsg);
-	//std::vector<CGlucoseLevels *> segments;
+	//print method
+	switch (method) {
+	case 1: {
+		std::cout << "Akima spline\n";
+		break;
+	}
+	case 2: {
+		std::cout << "Cubic spline\n";
+		break;
+	}
+	case 3: {
+		std::cout << "Quadratic spline\n";
+		break;
+	}
+	}
+	//time measurment
+	CTimer *ty = new CTimer();
+	ty->start();
 	for (int i = 0; i < segmentIds.size(); i++) {
 		std::vector<TGlucoseLevel> levels = std::vector<TGlucoseLevel>();
-		//vytvoris si isntanci CGlucoseLevel.Pres SetLevelCount reknes, kolik chces naalokkovat mista pro data.Pak si vytvoris pointer TGlucoseLevel * a ten prdnes do GetLevels.Ta metoda ti preda naalokovane misto na ten ukazatel a pak uz to jen jen preklopis tu pamet s datama na ten ukazatel pres memcpy
 		std::string query = "SELECT  julianday(measuredat), ist FROM measuredvalue WHERE segmentid = " + segmentIds[i] + " AND ist IS NOT NULL";
 		sqlite3_exec(db, query.c_str(), getSegmentLevels, &levels, &zErrMsg);
+		//process segment with levels
 		if (levels.size() > 0) {
 			CGlucoseLevels *segment = new CGlucoseLevels();
 			segment->AddRef();
 			segment->SetLevelsCount(levels.size());
 			TGlucoseLevel *ptr;
 			segment->GetLevels(&ptr);
-			for (size_t i = 0; i < levels.size(); i++) {
-				//printf("test %f\n", levels[i].level);
-			}
 			memcpy(ptr, levels.data(), levels.size() * sizeof(TGlucoseLevel));
-			size_t size;
-			segment->GetLevelsCount(&size);
-			printf("cajk %d %d\n", levels.size(), size);
-			//segments.push_back(segment);
-
-
-
-			printf("segment_id: %s\n", segmentIds[i].c_str());
-			processSegment(segment);
-
+			//print segment id
+			std::cout << "\tsegment_id: " << segmentIds[i].c_str() << "\n";
+			//process segment values for method
+			processSegment(method, segment);
 			segment->Release();
-
-			printf("cajk \n");
-			//printf("pocet %d %s \n", levels->size(), segmentIds[i].c_str());
 		}
 	}
-/*
-	printf("cajk \n");
-	size_t size;
-	segments[segments.size() - 1]->GetLevelsCount(&size);
-
-	printf("cajk %d\n", size);
-	TGlucoseLevel *ptr;
-	segments[segments.size() - 1]->GetLevels(&ptr);
-	for (size_t i = 0; i < segments.size(); i++) {
-		size_t size;
-		segments[i]->GetLevelsCount(&size);
-		//printf("test %d\n", size);
-	}
-
-	CMasker *masker = new CMasker(segments[0]);
-	size_t ss;
-	CGlucoseLevels *test = new CGlucoseLevels();
-	masker->GetLevels(1,(IGlucoseLevels **) &test);
-	test->GetLevelsCount(&ss);
-	printf("ssacek %d\n", ss);
-	CCubicSpline *cubic = new CCubicSpline(test);*/
-	/*for (size_t i = 255; i > 0; i--) {
-		TApproximationParams cubicParams = {
-			0,
-			{	//mask
-				i
-			}
-		};
-		cubic->Approximate(&cubicParams);
-	}*/
-	/*TApproximationParams cubicParams = {
-		0,
-		{	//mask
-			1
-		}
-	};
-	cubic->Approximate(&cubicParams);*/
-	//TApproximationParams cubicParams = TApproximationParams();
-	//cubic->Approximate(&cubicParams);
-	/*size_t filled;
-	floattype *levels = (floattype*)malloc(500 * sizeof(floattype));
-	cubic->GetLevels(0, 0.01, 50, levels, &filled, 0);
-	free(levels);
-	for (size_t i = 0; i < segments.size(); i++) {
-		segments[i]->Release();
-	}
-	delete cubic;*/
-	//sqlite3_exec(db, "SELECT * FROM measuredvalue WHERE segmentid = 2", getinfo, 0, &zErrMsg);
-	/*TGlucoseLevel *glucoseLevels;
-	sqlite3_exec(db, "SELECT * FROM ", fillLevels, glucoseLevels, &zErrMsg);*/
+	//stop timer
+	ty->stop();
+	delete ty;
 	sqlite3_close(db);
 
 	return 0;
 }
 
-
-HRESULT processSegment(CGlucoseLevels *segment) {
+HRESULT processSegment(int method, CGlucoseLevels *segment) {
 	CMasker *masker = new CMasker(segment);
 	CStatistics *stats = new CStatistics(segment);
-	//size_t ss;
-	/*process all mask for all methods*/
-	CGlucoseLevels *gl;// = new CGlucoseLevels();
-	//gl->AddRef();
-	std::map<floattype, floattype> derivations;
+	std::vector<CCommonApprox*> instances(255);
+	//process masks
+#if !defined(PARALLEL_TBB)
+	//std::map<floattype, floattype> derivations;
 	for (int mask = 255; mask > 0; mask--) {
-		//test->GetLevelsCount(&ss);
-		//printf("ssacek %d\n", ss);
-		masker->GetLevels(mask, (IGlucoseLevels **)&gl);
-		CCubicSpline *cubic = new CCubicSpline(gl);
-		CQuadraticSpline *quadra = new CQuadraticSpline(gl);
-		CAkimaSpline *akima = new CAkimaSpline(gl);
-		/*dont need params*/
-		cubic->Approximate(nullptr);
-		quadra->Approximate(nullptr);
-		akima->Approximate(nullptr);
-		printf("\tmask: %#X\n", mask);
-		if (mask == 255) {
-			size_t size;
-			gl->GetLevelsCount(&size);
-			TGlucoseLevel *ptr;
-			gl->GetLevels(&ptr);
-			//printf("vel: %d\n", size);
-			for (size_t i = 0; i < size; i++) {
-				floattype value;
-				size_t filled;
-				if (cubic->GetLevels(ptr[i].datetime, 0, 1, &value, &filled, 1) == S_OK && filled == 1) {
-					//printf("mask: %d %f %f\n", i, ptr[i].datetime, value);
-					derivations.insert(std::pair<floattype, floattype>(ptr[i].datetime, value));					
-				}
-				else {
-				}
-			}
-		}	
-
-
-		//TODO getlevels zavola statisticky nastroj presne pro casy z masky 255
-		floattype *levels = (floattype*)malloc(10 * sizeof(floattype));
-		size_t filled;
-		//printf("awtffasfaf\n");
-		//cubic->GetLevels(36525, 0.1, 1, levels, &filled, 0);
-		//printf("filled je %lu a hodnota %f\n", filled, levels[0]);
-		//size_t size;
-		//gl->GetLevelsCount(&size);
-		//printf("mask: %lu\n", size);
-		//stats->GetStats(cubic, derivations, mask);
-		free(levels);
-		delete cubic;
-		delete quadra;
-		delete akima;
-		//delete gl;
+		processMask(method, mask, masker, &instances);
 
 	}
-	//gl = nullptr;
-	//delete gl;
-	//printf("mrdka %d\n", gl->Release());
+#endif
+#if defined(PARALLEL_TBB)	
+	tbb::parallel_for(1, 256, [&](int mask) {
+		processMask(method, mask, masker, &instances);
+	});
+#endif
+	//prcess stats
+	std::vector<std::string> results(255);
+	processStats(masker, stats, &instances, &results);
+	for (int i = 255; i > 0; i--) {
+		std::cout << results[i - 1];
+	}
 	delete masker;
 	delete stats;
-
 	return S_OK;
+}
+
+
+
+HRESULT processMask(int method, int mask, CMasker *masker, std::vector<CCommonApprox*> *instances) {
+	CGlucoseLevels *gl;
+	masker->GetLevels(mask, (IGlucoseLevels **)&gl);
+	switch (method) {
+	case 1: {
+		CAkimaSpline *akima = new CAkimaSpline(gl);
+		akima->Approximate(nullptr);
+		(*instances)[mask - 1] = akima;
+		break;
+	}
+	case 2: {
+		CCubicSpline *cubic = new CCubicSpline(gl);
+		cubic->Approximate(nullptr); 
+		(*instances)[mask - 1] = cubic;
+		break;
+	}
+	case 3: {
+		CQuadraticSpline *quadra = new CQuadraticSpline(gl);
+		quadra->Approximate(nullptr);
+		(*instances)[mask - 1] = quadra;
+		break;
+	}
+	}
+	gl->Release();
+	return S_OK;
+}
+HRESULT processStats(CMasker *masker, CStatistics *stats, std::vector<CCommonApprox*> *instances, std::vector<std::string> *results) {
+	//get derivations for mask 255
+	CGlucoseLevels *gl;
+	masker->GetLevels(255, (IGlucoseLevels **)&gl);
+	std::map<floattype, floattype> derivations;
+	size_t size;
+	gl->GetLevelsCount(&size);
+	TGlucoseLevel *ptr;
+	gl->GetLevels(&ptr);
+	for (size_t i = 0; i < size; i++) {
+		floattype value;
+		size_t filled;
+		if((*instances)[254]->GetLevels(ptr[i].datetime, 0, 1, &value, &filled, 1) == S_OK && filled == 1) {
+			derivations.insert(std::pair<floattype, floattype>(ptr[i].datetime, value));
+		}
+		else {
+			return S_FALSE;
+		}
+	}
+	gl->Release();
+	//process stat for masks
+#if !defined(PARALLEL_TBB)
+	for (int mask = 255; mask > 0; mask--) {
+		processStatsMask(mask, stats, derivations, instances, results);
+	}
+#endif
+
+#if defined(PARALLEL_TBB)
+
+	tbb::parallel_for(1, 256, [&](int mask) {
+		processStatsMask(mask, stats, derivations, instances, results);
+	});
+#endif
+	return S_OK;
+}
+
+HRESULT processStatsMask(int mask, CStatistics *stats, std::map<floattype, floattype> derivations, std::vector<CCommonApprox*> *instances, std::vector<std::string> *results) {
+	std::stringstream ss;
+	ss.clear();
+	char buf[16];
+	sprintf(buf, "\t\tmask: %#X\n", mask); 
+	ss << buf;
+	std::string res;
+	stats->GetStats((*instances)[mask - 1], derivations, mask, &res);
+	delete (*instances)[mask - 1];
+	ss << res;
+	(*results)[mask - 1] = ss.str();
 }

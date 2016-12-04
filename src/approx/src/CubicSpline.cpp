@@ -1,6 +1,5 @@
 #include "CubicSpline.h"
 
-
 HRESULT CCubicSpline::Approximate(TApproximationParams *params) {
 	size_t count;
 	mEnumeratedLevels->GetLevelsCount(&count);
@@ -95,22 +94,35 @@ HRESULT  CCubicSpline::GetLevels(floattype desiredtime, floattype stepping, size
 		//printf("tu jsem1 %lu %f %f\n", *filled, currenttime, lastTime);
 		while (currenttime <= lastTime && count > 0) {
 			it = cParams.lower_bound(currenttime);
+			//workaround lower bound;
+			if (it != cParams.begin() && it->first != currenttime)
+			{
+				it--;
+			}
 			/*workround for last value*/
 			if (it == cParams.end()) {
 				it--;
 			}
+			printf("tu jsem %f %f %f \n", currenttime, it->first, currenttime - it->first);
 			//y = a{i} + b{i}*(x-x{i})+ c{i}*(x-x{i})^2+d{i}*(x-x{i})^3
 			res = it->second.a + it->second.b*(currenttime - it->first) + it->second.c*(currenttime - it->first)*(currenttime - it->first) + it->second.d*(currenttime - it->first)*(currenttime - it->first)*(currenttime - it->first);
 			levels[(*filled)] = res;
 			(*filled)++;
 			currenttime += stepping;
 			count--;
+			//printf("tu jsem %f %f %f %f %f %f\n", res, it->second.a, it->second.b, it->second.c, it->second.d, currenttime - it->first);
 			//printf("tu jsem2 %lu\n", *filled);
 		}
 	}
 	else if (derivationorder == 1){
 		while (currenttime <= lastTime && count > 0) {
 			it = cParams.lower_bound(currenttime);
+
+			//workaround lower bound;
+			if (it != cParams.begin() && it->first != currenttime)
+			{
+				it--;
+			}
 			/*workround for last value*/
 			if (it == cParams.end()) {
 				it--;

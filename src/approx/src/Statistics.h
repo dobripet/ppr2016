@@ -18,6 +18,15 @@ public:
 	CStatistics(IGlucoseLevels *levels);
 	~CStatistics();
 
-	HRESULT IfaceCalling  CStatistics::GetStats(IApproximatedGlucoseLevels *method, std::map<floattype, floattype> derivations, unsigned int mask);
+	HRESULT IfaceCalling  CStatistics::GetStats(IApproximatedGlucoseLevels *method, std::map<floattype, floattype> derivations, unsigned int mask, std::string *result);
 	//HRESULT  IfaceCalling GetLevels(int mask, IGlucoseLevels**levels);
+};
+
+class CTimer {
+protected:
+	ULARGE_INTEGER startTime, stopTime;
+public:
+	HRESULT IfaceCalling  CTimer::start();
+	HRESULT IfaceCalling  CTimer::stop();
+
 };

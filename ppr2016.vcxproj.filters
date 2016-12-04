@@ -83,5 +83,11 @@
     <ClInclude Include="src\approx\src\AkimaSpline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\approx\src\xx_amp_algorithms_impl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\approx\src\amp_algorithms.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

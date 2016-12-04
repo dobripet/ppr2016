@@ -75,6 +75,11 @@
     <IncludePath>lib\sqlite3\include;$(TBB_CONFIG)\include;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>lib\sqlite3\lib;$(TBB_CONFIG)\lib\intel64\vc14;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ExecutablePath>lib\sqlite3\bin;$(TBB_CONFIG)\bin\intel64\vc14;$(VC_ExecutablePath_x64);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(FxCopDir);$(PATH);</ExecutablePath>
+    <IncludePath>lib\sqlite3\include;$(TBB_CONFIG)\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>lib\sqlite3\lib;$(TBB_CONFIG)\lib\intel64\vc14;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -114,6 +119,17 @@
       <AdditionalDependencies>sqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>lib\sqlite3\include;$(TBB_CONFIG)\include;</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>PARALLEL_TBB</PreprocessorDefinitions>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>lib\sqlite3\lib;$(TBB_CONFIG)\lib\intel64\vc14;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>sqlite3.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\App.cpp" />
     <ClCompile Include="src\approx\src\AkimaSpline.cpp" />
@@ -128,12 +144,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\approx\src\AkimaSpline.h" />
+    <ClInclude Include="src\approx\src\amp_algorithms.h" />
     <ClInclude Include="src\approx\src\CommonApprox.h" />
     <ClInclude Include="src\approx\src\CubicSpline.h" />
     <ClInclude Include="src\approx\src\GlucoseLevels.h" />
     <ClInclude Include="src\approx\src\Masker.h" />
     <ClInclude Include="src\approx\src\QuadraticSpline.h" />
     <ClInclude Include="src\approx\src\Statistics.h" />
+    <ClInclude Include="src\approx\src\xx_amp_algorithms_impl.h" />
     <ClInclude Include="src\common\iface\ApproxIface.h" />
     <ClInclude Include="src\common\iface\referencedIface.h" />
     <ClInclude Include="src\common\rtl\cfixes.h" />
