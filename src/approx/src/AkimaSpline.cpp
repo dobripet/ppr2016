@@ -115,14 +115,14 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 	//printf("aproximuju %d %f %f\n", count, cParams.begin()->first, lastTime);
 	//return S_OK;
 #endif 
-#ifdef PARALLEL_AMP
-	std::vector<floattype> levelsV;
-	std::vector<floattype> datetimesV;
+#if defined(PARALLEL_AMP)
+	std::vector<floattype> levelsV(count);
+	std::vector<floattype> datetimesV(count);
 	akima_params *par = (akima_params*)malloc((count-1) * sizeof(akima_params));
 	//prepare vectors
 	for (size_t i = 0; i < count; i++) {
-		levelsV.push_back(levels[i].level);
-		datetimesV.push_back(levels[i].datetime);
+		levelsV[i] = levels[i].level;
+		datetimesV[i] = levels[i].datetime;
 	}
 	// Create C++ AMP objects.  
 	concurrency::array_view<floattype, 1> y(count, levelsV);
@@ -131,7 +131,7 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 	concurrency::extent<1> ext(count - 3);
 	parP.discard_data();
 	//inside params
-	/*
+	
 	concurrency::parallel_for_each(
 		// Define the compute domain, which is the set of threads that are created.  
 		parP.extent,
@@ -169,37 +169,7 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 		parP[i].c = (3 * m2 - 2 * t - t1) / dx;
 		parP[i].d = (t + t1 - 2 * m2) / (dx*dx);	
 	}
-	);*/
-	std::vector<floattype> vec_times(count), vec_lvls(count);
-	for (size_t i = 0; i < count; i++) {
-		vec_times[i] = levels[i].datetime;
-		vec_lvls[i] = levels[i].level;
-	}
-
-//	concurrency::extent<1> ext(count - 5);
-	const concurrency::array_view<const floattype, 1> times(count, vec_times), lvls(count, vec_lvls);
-	//concurrency::array_view<floattype, 1> p1s(size, p1), p2s(size, p2), p3s(size, p3);
-	//p1s.discard_data();
-	//p2s.discard_data();
-	//p3s.discard_data();
-	concurrency::parallel_for_each(ext, [=](concurrency::index<1> idx) restrict(amp) {
-		floattype yy, xx, ti, ti1, m0, m1, m2, m3, m4;
-		const int i = idx[0] + 2; // offset
-		m0 = (lvls[i - 1] - lvls[i - 2]) / (times[i - 1] - times[i - 2]);
-		m1 = (lvls[i] - lvls[i - 1]) / (times[i] - times[i - 1]);
-		m2 = (lvls[i + 1] - lvls[i]) / (times[i + 1] - times[i]);
-		m3 = (lvls[i + 2] - lvls[i + 1]) / (times[i + 2] - times[i + 1]);
-		m4 = (lvls[i + 3] - lvls[i + 2]) / (times[i + 3] - times[i + 2]);
-		ti = get_t(m0, m1, m2, m3);
-		ti1 = get_t(m1, m2, m3, m4);
-
-		yy = lvls[i + 1] - lvls[i];
-		xx = times[i + 1] - times[i];
-		parP[i].a = y[i];
-		parP[i].b = ti;
-		parP[i].c = get_p2(xx, yy, ti, ti1);
-		parP[i].d = get_p3(xx, yy, ti, ti1);
-	});
+	);
 	parP.synchronize();
 	//tail boundary params
 	floattype tb, tb1, tb2;

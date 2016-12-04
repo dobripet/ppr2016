@@ -162,13 +162,13 @@ HRESULT CStatistics::GetStats(IApproximatedGlucoseLevels *method, std::map<float
 	//get stats for all points
 	char buf[128];
 	std::stringstream ss;
-	/*ss << "\t\t\tall concentrations\n";
+	ss << "\t\t\tall concentrations\n";
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
 		&relFirstQ, &relMedian, &relThirdQ, &relMax, &relStandardDeviation, method, 255, 0, derivations);
 	sprintf(buf, "\t\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
 	ss << buf;
 	sprintf(buf, "\t\t\t\trelative: %f, %f, %f, %f, %f, %f, %f\n", relMean, relMin, relFirstQ, relMedian, relThirdQ, relMax, relStandardDeviation);
-	ss << buf;*/
+	ss << buf;
 	/*//get stats for points in mask 0
 	ss << "\t\t\tbit mask 0\n";
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
@@ -187,12 +187,12 @@ HRESULT CStatistics::GetStats(IApproximatedGlucoseLevels *method, std::map<float
 	ss << buf;
 
 	*/
-	ss << "\t\t\tfirst continuous derivative all concentrations\n";
+	/*ss << "\t\t\tfirst continuous derivative all concentrations\n";
 	//get stats for all points derivation 1
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
 		&relFirstQ, &relMedian, &relThirdQ, &relMax, &relStandardDeviation, method, 255, 1, derivations);
 	sprintf(buf, "\t\t\t\tabsolute: %f, %f, %f, %f, %f, %f, %f\n", absMean, absMin, absFirstQ, absMedian, absThirdQ, absMax, absStandardDeviation);
-	ss << buf;
+	ss << buf;*/
 	/*ss << "\t\t\tfirst continuous derivative bit mask 0\n";
 	//get stats for points in mask 0 derivation 1
 	getStatsForMask(&absMean, &absMin, &absFirstQ, &absMedian, &absThirdQ, &absMax, &absStandardDeviation, &relMean, &relMin,
