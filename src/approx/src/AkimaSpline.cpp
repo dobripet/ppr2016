@@ -2,21 +2,7 @@
 #include <amp.h>  
 #include <amp_math.h>
 #include <iostream>
-int a();
 
-floattype get_p3(floattype &xx, floattype &yy, floattype &ti, floattype &ti1) restrict(amp) {
-	return (ti + ti1 - 2 * yy / xx) / concurrency::precise_math::pow(xx, 2);
-}
-floattype get_p2(floattype &xx, floattype &yy, floattype &ti, floattype &ti1) restrict(cpu, amp) {
-	return (3 * yy / xx - 2 * ti - ti1) / xx;
-}
-
-floattype get_t(floattype m0, floattype m1, floattype m2, floattype m3) restrict(amp) {
-	floattype numerator, denominator;
-	numerator = concurrency::precise_math::fabs(m3 - m2) * m1 + concurrency::precise_math::fabs(m1 - m0) * m2;
-	denominator = concurrency::precise_math::fabs(m3 - m2) + concurrency::precise_math::fabs(m1 - m0);
-	return (denominator == 0) ? 0.5 * (m2 + m1) : numerator / denominator;
-}
 
 HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 
@@ -58,7 +44,6 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 		//slopes
 		//m{i} = (y{i+1}-y{i})/(x{i+1}-x{i})
 		m[i - 2] = (levels[i - 1].level - levels[i - 2].level) / (levels[i - 1].datetime - levels[i - 2].datetime);
-		//std::cout << "wtf " << m[0] << "\n";
 		//m[i] = (levels[i + 1].level - levels[i].level) / dx;
 		//zero check
 		if (m[i+1] == m[i] && m[i-1] == m[i-2]) {
@@ -74,8 +59,6 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 			(3 * m[i] - 2 * t[i] - t[i + 1]) / dx, (t[i] + t[i + 1] - 2 * m[i]) / (dx*dx))));
 	}
 	// head boundary values
-	//m[0] = (levels[1].level - levels[0].level) / (levels[1].datetime - levels[0].datetime);
-	//m[1] = (levels[2].level - levels[1].level) / (levels[2].datetime - levels[1].datetime);
 	//m{-1} = 2m{0} - 2m{1}
 	floattype mm1 = 2 * m[0] - m[1];
 	//m{-2} = 2m{-1} - m{0}
@@ -98,22 +81,12 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 	}
 	else {
 		t[0] = (abs(m[1] - m[0])*mm1 + abs(mm1 - mm2)*m[0]) / (abs(m[1] - m[0]) + abs(mm1 - mm2));
-		//std::cout << "nechapu tohle " << t[0] << " " << m[0] << " " << mm1 << " " << mm2<< " " << m[1]<< " " << m[2] << " " << m[3] <<std::endl;
-		//std::cout << "Wtf asdasd " << t[0] << "abs " << abs(m[1] - m[0])*mm1 << "mka " << mm1 << "dv " << (levels[1].level - levels[0].level) / (levels[1].datetime - levels[0].datetime)
-			//<< std::endl;
 	}
 	aParams.insert(std::pair<floattype, akima_params>(levels[0].datetime,
 		akima_params(levels[0].level, t[0], (3 * m[0] - 2 * t[0] - t[1]) / (levels[1].datetime - levels[0].datetime),
 		(t[0] + t[1] - 2 * m[0]) / ((levels[1].datetime - levels[0].datetime)*(levels[1].datetime - levels[0].datetime)))));
-
-
-
-	//add last timestamp to check bounds in getLevels
-	lastTime = levels[count - 1].datetime;
 	free(m);
 	free(t);
-	//printf("aproximuju %d %f %f\n", count, cParams.begin()->first, lastTime);
-	//return S_OK;
 #endif 
 #if defined(PARALLEL_AMP)
 	std::vector<floattype> levelsV(count);
@@ -214,7 +187,6 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 	parP[count - 3] = akima_params(levels[count - 3].level, tb, (3 * m2 - 2 * tb - tb1) / dx0,
 		(tb + tb1 - 2 * m2) / (dx0*dx0));
 	//head boundary params
-
 	//m{i} = (y{i+1}-y{i})/(x{i+1}-x{i})
 	dy1 = levels[2].level - levels[1].level;
 	dx1 = levels[2].datetime - levels[1].datetime;
@@ -251,14 +223,11 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 	parP[1] = akima_params(levels[1].level, tb1, (3 * m3 - 2 * tb1 - tb2) / dx1,
 		(tb1 + tb2 - 2 * m3) / (dx1*dx1));
 
-
-	//std::cout << "nechapu tohle " << tb << " " << m2 << " " << m1 << " " << m0 << " " << m3 << " " << m4 << " " << m5 << std::endl;
 	parP[0] = akima_params(levels[0].level, tb, (3 * m2 - 2 * tb - tb1) / dx0,
 		(tb + tb1 - 2 * m2) / (dx0*dx0));
 	//fill map
 	for (int i = 0; i < count - 1; i++) {
 		aParams.insert(std::pair<floattype, akima_params>(levels[i].datetime, parP[i])); 
-		printf("jedu %f %f %f %f\n", parP[i].a, parP[i].b, parP[i].c, parP[i].d);// aParams[levels[i].datetime].b);// mC[i]);
 	}
 	free(par);
 #endif
@@ -268,35 +237,26 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 }
 HRESULT  CAkimaSpline::GetLevels(floattype desiredtime, floattype stepping, size_t count, floattype *levels, size_t *filled, size_t derivationorder) {
 	*filled = 0;
-	/*Not aproximated yet*/
+	//Not aproximated yet
 	if (aParams.empty()) {
-		printf("err empty aparams\n");
+		std::cerr << "AkimaError: getLevels - Not aproximated yet!";
 		return S_FALSE;
 	}
-	//printf("vracim hodnoty %f %f %f", desiredtime, cParams.begin()->first, cParams.rbegin()->first);
-	//cParams.end()->first
-	//printf("test bond %f\n", cParams.lower_bound(desiredtime)->first);
-	//printf("co se deje?\n");
-	//std::map<floattype, cubic_params>::iterator itlow;
-	//itlow = cParams.lower_bound(desiredtime);
-	/*Invalid time (after end or too much before start)*/
+	//Invalid time (after end or too much before start)
 	if (lastTime < desiredtime || desiredtime + (stepping*count) < aParams.begin()->first) {
-		printf("err time\n");
+		std::cerr << "AkimaError: getLevels - Invalid time (after or before segment)!";
 		return S_FALSE;
 	}
-	//printf("prdelni testik %d\n", (cParams.find(desiredtime)));
-	//std::map<floattype, cubic_params>::iterator it = cParams.find(desiredtime);
-	/*Move time to start*/
+	//Move time to start
 	floattype currenttime = desiredtime;
 	while (currenttime < aParams.begin()->first) {
 		currenttime += stepping;
 		count--;
 	}
-	/*Walk trough*/
+	//Walk trough
 	std::map<floattype, akima_params>::iterator it;
 	floattype res;
 	if (derivationorder == 0) {
-		//printf("tu jsem1 %lu %f %f\n", *filled, currenttime, lastTime);
 		while (currenttime <= lastTime && count > 0) {
 			it = aParams.lower_bound(currenttime);
 			//workaround lower bound;
@@ -304,7 +264,7 @@ HRESULT  CAkimaSpline::GetLevels(floattype desiredtime, floattype stepping, size
 			{
 				it--;
 			}
-			/*workround for last value*/
+			//workround for last value
 			if (it == aParams.end()) {
 				it--;
 			}
@@ -315,7 +275,6 @@ HRESULT  CAkimaSpline::GetLevels(floattype desiredtime, floattype stepping, size
 			(*filled)++;
 			currenttime += stepping;
 			count--;
-			printf("tu jsem %f %f %f %f %f %f\n", res, it->second.a, it->second.b, it->second.c, it->second.d, time);
 		}
 	}
 	else if (derivationorder == 1) {
@@ -326,21 +285,22 @@ HRESULT  CAkimaSpline::GetLevels(floattype desiredtime, floattype stepping, size
 			{
 				it--;
 			}
-			/*workround for last value*/
+			//workround for last value
 			if (it == aParams.end()) {
 				it--;
 			}
+			floattype time = currenttime - it->first;
 			//y = b{i} + 2*c{i}*(x-x{i}) + 3*d{i}*(x-x{i})^2
-			res = it->second.b + 2 * it->second.c*(currenttime - it->first) + 3 * it->second.d*(currenttime - it->first)*(currenttime - it->first);
+			res = it->second.b + 2 * it->second.c*time + 3 * it->second.d*time*time;
 			levels[(*filled)] = res;
 			(*filled)++;
 			currenttime += stepping;
 			count--;
-			//printf("tu jsem roblhl %lu\n", *filled);
 		}
 	}
 	//wrong derivative order
 	else {
+		std::cerr << "AkimaError: getLevels - Invalid derivative order!";
 		return S_FALSE;
 	}
 	return S_OK;

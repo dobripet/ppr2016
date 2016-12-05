@@ -7,7 +7,7 @@
 
 #pragma warning( push )
 #pragma warning( disable : 4250 ) // C4250 - 'class1' : inherits 'class2::member' via dominance
-
+//struct to contain akima params
 typedef struct akima_params{
 	floattype a;
 	floattype b;
@@ -20,7 +20,9 @@ typedef struct akima_params{
 
 class CAkimaSpline : public CCommonApprox, public virtual CReferenced {
 protected:
+	//mapping datetime to akima params
 	std::map<floattype, akima_params> aParams;
+	//lastpoint datetime
 	floattype lastTime;
 public:
 	CAkimaSpline(IGlucoseLevels *levels);

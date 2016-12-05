@@ -4,6 +4,7 @@
 #include "approx\src\CubicSpline.h"
 #include "approx\src\QuadraticSpline.h"
 #include "approx\src\AkimaSpline.h"
+#include "approx\src\CatmullRomSpline.h"
 #include "approx\src\Masker.h"
 #include "approx\src\Statistics.h"
 #include <iostream>
@@ -38,12 +39,12 @@ static int getSegsIds(void *segmentIds, int argc, char **argv, char **azColName)
 int main(int argc, void *argv[]) {
 	int method;
 	if (argc != 3) {
-		std::cerr << "Invalid parameters! Method flags Akima spline: 1, Cubic spline: 2 Quadratic spline: 3. Usage: ppr2016 PATH_TO_DB_FILE METHOD";
+		std::cerr << "Invalid parameters! Method flags Akima spline: 1, Cubic spline: 2 Catmull-Rom Spline 3 Quadratic spline: 4. Usage: ppr2016 PATH_TO_DB_FILE METHOD";
 		return 1;
 	}
 	method = atoi((char*)argv[2]);
-	if (method < 1 || method > 3) {
-		std::cerr << "Invalid parameters! Method flags Akima spline: 1, Cubic spline: 2 Quadratic spline: 3. Usage: ppr2016 PATH_TO_DB_FILE METHOD";
+	if (method < 1 || method > 4) {
+		std::cerr << "Invalid parameters! Method flags Akima spline: 1, Cubic spline: 2 Catmull-Rom Spline 3 Quadratic spline: 4. Usage: ppr2016 PATH_TO_DB_FILE METHOD";
 		return 1;
 	}
 #ifdef PARALLEL_AMP
@@ -75,6 +76,10 @@ int main(int argc, void *argv[]) {
 		break;
 	}
 	case 3: {
+		std::cout << "Cetripetal Catmull-Rom spline\n";
+		break;
+	}
+	case 4: {
 		std::cout << "Quadratic spline\n";
 		break;
 	}
@@ -115,10 +120,8 @@ HRESULT processSegment(int method, CGlucoseLevels *segment) {
 	std::vector<CCommonApprox*> instances(255);
 	//process masks
 #if !defined(PARALLEL_TBB)
-	//std::map<floattype, floattype> derivations;
 	for (int mask = 255; mask > 0; mask--) {
 		processMask(method, mask, masker, &instances);
-
 	}
 #endif
 #if defined(PARALLEL_TBB)	
@@ -126,19 +129,19 @@ HRESULT processSegment(int method, CGlucoseLevels *segment) {
 		processMask(method, mask, masker, &instances);
 	});
 #endif
-	//prcess stats
+	//prcess stats and print results
 	std::vector<std::string> results(255);
 	processStats(masker, stats, &instances, &results);
 	for (int i = 255; i > 0; i--) {
 		std::cout << results[i - 1];
 	}
-	delete masker;
+	;	delete masker;
 	delete stats;
 	return S_OK;
 }
 
 
-
+//process mask for given method
 HRESULT processMask(int method, int mask, CMasker *masker, std::vector<CCommonApprox*> *instances) {
 	CGlucoseLevels *gl;
 	masker->GetLevels(mask, (IGlucoseLevels **)&gl);
@@ -156,6 +159,12 @@ HRESULT processMask(int method, int mask, CMasker *masker, std::vector<CCommonAp
 		break;
 	}
 	case 3: {
+		CCatmullRomSpline *cat = new CCatmullRomSpline(gl);
+		cat->Approximate(nullptr);
+		(*instances)[mask - 1] = cat;
+		break;
+	}
+	case 4: {
 		CQuadraticSpline *quadra = new CQuadraticSpline(gl);
 		quadra->Approximate(nullptr);
 		(*instances)[mask - 1] = quadra;
@@ -165,6 +174,7 @@ HRESULT processMask(int method, int mask, CMasker *masker, std::vector<CCommonAp
 	gl->Release();
 	return S_OK;
 }
+//get all statistics for segment
 HRESULT processStats(CMasker *masker, CStatistics *stats, std::vector<CCommonApprox*> *instances, std::vector<std::string> *results) {
 	//get derivations for mask 255
 	CGlucoseLevels *gl;
@@ -187,20 +197,19 @@ HRESULT processStats(CMasker *masker, CStatistics *stats, std::vector<CCommonApp
 	gl->Release();
 	//process stat for masks
 #if !defined(PARALLEL_TBB)
-	for (int mask = 255; mask > 0; mask--) {
+	for (int mask = 170; mask > 169; mask--) {
 		processStatsMask(mask, stats, derivations, instances, results);
 	}
 #endif
 
 #if defined(PARALLEL_TBB)
-
 	tbb::parallel_for(1, 256, [&](int mask) {
 		processStatsMask(mask, stats, derivations, instances, results);
 	});
 #endif
 	return S_OK;
 }
-
+//process stats for individual mask and result add to result vector
 HRESULT processStatsMask(int mask, CStatistics *stats, std::map<floattype, floattype> derivations, std::vector<CCommonApprox*> *instances, std::vector<std::string> *results) {
 	std::stringstream ss;
 	ss.clear();
@@ -212,4 +221,5 @@ HRESULT processStatsMask(int mask, CStatistics *stats, std::map<floattype, float
 	delete (*instances)[mask - 1];
 	ss << res;
 	(*results)[mask - 1] = ss.str();
+	return S_OK;
 }

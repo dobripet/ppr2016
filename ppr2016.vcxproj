@@ -133,6 +133,7 @@
   <ItemGroup>
     <ClCompile Include="src\App.cpp" />
     <ClCompile Include="src\approx\src\AkimaSpline.cpp" />
+    <ClCompile Include="src\approx\src\CatmullRomSpline.cpp" />
     <ClCompile Include="src\approx\src\CommonApprox.cpp" />
     <ClCompile Include="src\approx\src\CubicSpline.cpp" />
     <ClCompile Include="src\approx\src\GlucoseLevels.cpp" />
@@ -144,14 +145,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\approx\src\AkimaSpline.h" />
-    <ClInclude Include="src\approx\src\amp_algorithms.h" />
+    <ClInclude Include="src\approx\src\CatmullRomSpline.h" />
     <ClInclude Include="src\approx\src\CommonApprox.h" />
     <ClInclude Include="src\approx\src\CubicSpline.h" />
     <ClInclude Include="src\approx\src\GlucoseLevels.h" />
     <ClInclude Include="src\approx\src\Masker.h" />
     <ClInclude Include="src\approx\src\QuadraticSpline.h" />
     <ClInclude Include="src\approx\src\Statistics.h" />
-    <ClInclude Include="src\approx\src\xx_amp_algorithms_impl.h" />
     <ClInclude Include="src\common\iface\ApproxIface.h" />
     <ClInclude Include="src\common\iface\referencedIface.h" />
     <ClInclude Include="src\common\rtl\cfixes.h" />

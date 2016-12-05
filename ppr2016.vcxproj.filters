@@ -45,6 +45,9 @@
     <ClCompile Include="src\approx\src\AkimaSpline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\approx\src\CatmullRomSpline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\approx\src\CommonApprox.h">
@@ -83,10 +86,7 @@
     <ClInclude Include="src\approx\src\AkimaSpline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\approx\src\xx_amp_algorithms_impl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\approx\src\amp_algorithms.h">
+    <ClInclude Include="src\approx\src\CatmullRomSpline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

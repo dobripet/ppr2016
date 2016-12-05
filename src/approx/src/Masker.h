@@ -5,11 +5,11 @@
 
 class CMasker{
 protected:
+	//vector of all mask levels
 	std::vector<IGlucoseLevels *> maskedLevels;
-	std::vector<std::vector<floattype>> maskedArrLevels;
-	std::vector<std::vector<floattype>> maskedArrDatetimes;
 public:
 	CMasker(IGlucoseLevels *levels);
 	~CMasker();
+	//returns levels for given mask
 	HRESULT  IfaceCalling GetLevels(int mask, IGlucoseLevels**levels);
 };

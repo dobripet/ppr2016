@@ -1,5 +1,4 @@
 #include "Statistics.h"
-#include "CubicSpline.h"
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -14,7 +13,6 @@ HRESULT CStatistics::printStats(floattype mean, floattype absMin, floattype absF
 HRESULT CStatistics::getStatsForMask(floattype *absMean, floattype *absMin, floattype *absFirstQ, floattype *absMedian, floattype *absThirdQ, floattype *absMax,
 	floattype *absStandardDeviation, floattype *relMean, floattype *relMin, floattype *relFirstQ, floattype *relMedian, floattype *relThirdQ,
 	floattype *relMax, floattype *relStandardDeviation, IApproximatedGlucoseLevels *method, unsigned int mask, int derivation, std::map<floattype, floattype> derivations) {
-	//printf("maska je %u", mask);
 	floattype absSum = 0.;
 	floattype absSumsq = 0.;
 	floattype relSum = 0.;
@@ -26,12 +24,11 @@ HRESULT CStatistics::getStatsForMask(floattype *absMean, floattype *absMin, floa
 	TGlucoseLevel *ptr;
 	levels->GetLevels(&ptr);
 	std::ofstream file;
-	//if (mask == 1) {
-		file.open("C:/Users/Petr/Dropbox/Skola/PPR/semestralka/ppr2016/data/output.csv", std::ios::trunc);
-		file.precision(5);
-		file << "mask:" << mask <<std::endl;
-		file << "date" << ", " << "calc" << ", " << "real" << "\n";
-	//}
+	/*
+	file.open("C:/Users/Petr/Dropbox/Skola/PPR/semestralka/ppr2016/data/output.csv", std::ios::trunc);
+	file.precision(5);
+	file << "date" << ", " << "calc" << ", " << "real" << "\n";
+	*/
 	for (size_t i = 0; i < size; i++) {
 		int mod = i % 8;
 		//get value for mask
@@ -44,7 +41,7 @@ HRESULT CStatistics::getStatsForMask(floattype *absMean, floattype *absMin, floa
 					floattype relerr = err / ptr[i].level;
 					absError.push_back(err);
 					relError.push_back(relerr);
-					file << (ptr[i].datetime - ptr[0].datetime) << ", " << value << ", " << ptr[i].level << "\n";
+					//file << (ptr[i].datetime - ptr[0].datetime) << ", " << value << ", " << ptr[i].level << "\n";
 					absSum += err;
 					absSumsq += err * err;
 					relSum += relerr;
@@ -69,18 +66,17 @@ HRESULT CStatistics::getStatsForMask(floattype *absMean, floattype *absMin, floa
 	if (size < 5) {
 		return S_FALSE;
 	}
+	//absolute
 	getQuartils(absMin, absFirstQ, absMedian, absThirdQ, absMax, absError);
 	*absMean = absSum / size;
-	//std::cout << relSumsq << " " << *relMean << "\n";
 	*absStandardDeviation = sqrt((absSumsq - (((*absMean)*(*absMean)) / size)) / size);//sqrt from variance
 	if (derivation == 0) {
+		//relative
 		getQuartils(relMin, relFirstQ, relMedian, relThirdQ, relMax, relError);
 		*relMean = relSum / size;
 		*relStandardDeviation = sqrt((relSumsq - (((*relMean)*(*relMean)) / size)) / size);//sqrt from variance
 	}
-	if (mask == 1){
-		file.close();
-	}
+	//file.close();
 	return S_OK;
 }
 HRESULT CStatistics::getQuartils(floattype *min, floattype *firstQ, floattype *median, floattype *thirdQ, floattype *max, std::vector<floattype> error) {
@@ -92,10 +88,7 @@ HRESULT CStatistics::getQuartils(floattype *min, floattype *firstQ, floattype *m
 	*median = 0.;
 	*thirdQ = 0.;
 	*max = 0.;
-	if (error.size() > 0) {
-		/*for (int i = 0; i < error.size(); i++) {
-			printf("%f\n",error[i]);
-		}*/
+	if (error.size() > 0) {		
 		if (error.size() & 1) {
 			//odd size
 			//median
@@ -107,12 +100,10 @@ HRESULT CStatistics::getQuartils(floattype *min, floattype *firstQ, floattype *m
 			//third quartil
 			std::nth_element(error.begin() + half, error.begin() + threeQuarters, error.end());
 			*thirdQ = error[threeQuarters];
-			//std::cout << "index kvartilu " << half << " " << quarter << " " << threeQuarters << " \n";
 
 		}
 		else {
 			//even size
-			//absolute
 			//median
 			std::nth_element(error.begin(), error.begin() + half, error.end());
 			std::nth_element(error.begin(), error.begin() + half - 1, error.begin() + half);
@@ -125,7 +116,6 @@ HRESULT CStatistics::getQuartils(floattype *min, floattype *firstQ, floattype *m
 			std::nth_element(error.begin() + half, error.begin() + threeQuarters, error.end());
 			std::nth_element(error.begin() + half, error.begin() + threeQuarters - 1, error.begin() + threeQuarters);
 			*thirdQ = (error[threeQuarters] + error[threeQuarters - 1]) / 2;
-			//std::cout << error.size() << " index kvartilu " << half << " " << quarter << " " << threeQuarters <<" " << (*thirdQ) << " \n";
 		}
 		//min
 		std::nth_element(error.begin(), error.begin(), error.begin() + quarter);
