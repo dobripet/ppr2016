@@ -37,6 +37,9 @@ static int getSegsIds(void *segmentIds, int argc, char **argv, char **azColName)
 }
 
 int main(int argc, void *argv[]) {
+	//time measurment
+	CTimer *ty = new CTimer();
+	ty->start();
 	int method;
 	if (argc != 3) {
 		std::cerr << "Invalid parameters! Method flags Akima spline: 1, Cubic spline: 2 Catmull-Rom Spline 3 Quadratic spline: 4. Usage: ppr2016 PATH_TO_DB_FILE METHOD";
@@ -84,9 +87,6 @@ int main(int argc, void *argv[]) {
 		break;
 	}
 	}
-	//time measurment
-	CTimer *ty = new CTimer();
-	ty->start();
 	for (int i = 0; i < segmentIds.size(); i++) {
 		std::vector<TGlucoseLevel> levels = std::vector<TGlucoseLevel>();
 		std::string query = "SELECT  julianday(measuredat), ist FROM measuredvalue WHERE segmentid = " + segmentIds[i] + " AND ist IS NOT NULL";
@@ -106,10 +106,11 @@ int main(int argc, void *argv[]) {
 			segment->Release();
 		}
 	}
+	sqlite3_close(db);
+
 	//stop timer
 	ty->stop();
 	delete ty;
-	sqlite3_close(db);
 
 	return 0;
 }
@@ -135,7 +136,7 @@ HRESULT processSegment(int method, CGlucoseLevels *segment) {
 	for (int i = 255; i > 0; i--) {
 		std::cout << results[i - 1];
 	}
-	;	delete masker;
+	delete masker;
 	delete stats;
 	return S_OK;
 }
@@ -197,7 +198,7 @@ HRESULT processStats(CMasker *masker, CStatistics *stats, std::vector<CCommonApp
 	gl->Release();
 	//process stat for masks
 #if !defined(PARALLEL_TBB)
-	for (int mask = 170; mask > 169; mask--) {
+	for (int mask = 255; mask > 0; mask--) {
 		processStatsMask(mask, stats, derivations, instances, results);
 	}
 #endif

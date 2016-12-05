@@ -122,8 +122,10 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>lib\sqlite3\include;$(TBB_CONFIG)\include;</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>PARALLEL_AMP</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PARALLEL_TBB</PreprocessorDefinitions>
       <WarningLevel>Level1</WarningLevel>
+      <UndefinePreprocessorDefinitions>
+      </UndefinePreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>lib\sqlite3\lib;$(TBB_CONFIG)\lib\intel64\vc14;</AdditionalLibraryDirectories>

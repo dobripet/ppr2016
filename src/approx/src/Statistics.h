@@ -14,10 +14,6 @@ protected:
 	HRESULT getStatsForMask(floattype *absMean, floattype *absMin, floattype *absFirstQ, floattype *absMedian, floattype *absThirdQ, floattype *absMax,
 		floattype *absStandardDeviation, floattype *relMean, floattype *relMin, floattype *relFirstQ, floattype *relMedian, floattype *relThirdQ,
 		floattype *relMax, floattype *relStandardDeviation, IApproximatedGlucoseLevels *method, unsigned int mask, int derivation, std::map<floattype, floattype> derivations);
-	//prints given statistics
-	HRESULT printStats(floattype absMean, floattype absMin, floattype absFirstQ, floattype absMedian, floattype absThirdQ, floattype absMax,
-		floattype absStandardDeviation, floattype relMean, floattype relMin, floattype relFirstQ, floattype relMedian, floattype relThirdQ,
-		floattype relMax, floattype relStandardDeviation, unsigned int mask);
 public:
 	CStatistics(IGlucoseLevels *levels);
 	~CStatistics();

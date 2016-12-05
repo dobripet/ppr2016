@@ -2,6 +2,7 @@
 #include <amp.h>  
 #include <amp_math.h>
 #include <iostream>
+#include "Statistics.h"
 
 
 HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
@@ -101,13 +102,12 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 	concurrency::array_view<floattype, 1> y(count, levelsV);
 	concurrency::array_view<floattype, 1> x(count, datetimesV);
 	concurrency::array_view<akima_params, 1> parP(count - 1, par);
-	concurrency::extent<1> ext(count - 3);
+	concurrency::extent<1> ext(count - 5);
 	parP.discard_data();
 	//inside params
-	
 	concurrency::parallel_for_each(
 		// Define the compute domain, which is the set of threads that are created.  
-		parP.extent,
+		ext,
 		// Define the code to run on each thread on the accelerator.  
 		[=](concurrency::index<1> idx) restrict(amp)
 	{
@@ -134,15 +134,14 @@ HRESULT CAkimaSpline::Approximate(TApproximationParams *params) {
 		}
 		else {
 			t1 = (concurrency::fast_math::fabs(m4 - m3)*m2 + concurrency::fast_math::fabs(m2 - m1)*m3) /
-				(concurrency::fast_math::fabs(m4 - m3) + concurrency::fast_math::fabs(m2 - m1)); 
+				(concurrency::fast_math::fabs(m4 - m3) + concurrency::fast_math::fabs(m2 - m1));
 		}
 		//a{i} is y{i}, b{i} is t{i}, c{i} is (3 * m{i} - 2 * t{i} - t{i+1}) / (x{i+1} -x{i}) and d{i} is (t{i} + t{i+1} - 2*m{i}) / (x{i+1} -x{i})^2
-		parP[i].a = y[i]; 
+		parP[i].a = y[i];
 		parP[i].b = t;
 		parP[i].c = (3 * m2 - 2 * t - t1) / dx;
-		parP[i].d = (t + t1 - 2 * m2) / (dx*dx);	
-	}
-	);
+		parP[i].d = (t + t1 - 2 * m2) / (dx*dx);
+		});
 	parP.synchronize();
 	//tail boundary params
 	floattype tb, tb1, tb2;

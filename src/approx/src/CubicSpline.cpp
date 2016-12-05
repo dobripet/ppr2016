@@ -2,6 +2,7 @@
 #include <amp.h>  
 #include <amp_math.h>
 #include <iostream>
+#include "Statistics.h"
 //solve tridiagonal systems
 #if defined(PARALLEL_AMP)
 HRESULT Tridiagonal(int count, TGlucoseLevel **levels, std::vector<floattype> *z, std::vector<floattype> *x, std::vector<floattype> *y);
@@ -25,7 +26,7 @@ HRESULT CCubicSpline::Approximate(TApproximationParams *params) {
 	Tridiagonal(count, &levels, &z, &h);
 	//calc params and store them
 	for (int i = 0; i < count - 1; i++) {
-		floattype b = (-h[i] / 6)*z[i + 1] - (h[i] / 3)*z[i] + (1 / h[i])*(levels[i+1].level - levels[i].level);
+		floattype b = (-h[i] / 6)*z[i + 1] - (h[i] / 3)*z[i] + (1 / h[i])*(levels[i + 1].level - levels[i].level);
 		floattype d = (1 / (6 * h[i]))*(z[i + 1] - z[i]);
 		cParams.insert(std::pair<floattype, cubic_params>(levels[i].datetime, cubic_params(levels[i].level, b, z[i] / 2, d)));
 	}
@@ -43,11 +44,11 @@ HRESULT CCubicSpline::Approximate(TApproximationParams *params) {
 	concurrency::array_view<floattype, 1> z(count, zV);
 	concurrency::array_view<cubic_params, 1> parP(count - 1, par);
 	concurrency::extent<1> ext(count - 1);
-	parP.discard_data();
+	parP.discard_data(); 
 	concurrency::parallel_for_each(
-		// Define the compute domain, which is the set of threads that are created.  
+		// Define the compute domain, which is the set of threads that are created.
 		parP.extent,
-		// Define the code to run on each thread on the accelerator.  
+		// Define the code to run on each thread on the accelerator.
 		[=](concurrency::index<1> i) restrict(amp)
 	{
 		floattype h = x[i + 1] - x[i];
@@ -55,8 +56,9 @@ HRESULT CCubicSpline::Approximate(TApproximationParams *params) {
 		parP[i].a = y[i];
 		parP[i].b = (-h / 6)*z[i + 1] - (h / 3)*z[i] + (1 / h)*(y[i + 1] - y[i]);
 		parP[i].c = z[i] / 2;
-		parP[i].d = (1 / (6 * h))*(z[i + 1] - z[i]);	
+		parP[i].d = (1 / (6 * h))*(z[i + 1] - z[i]);
 	});
+	
 	parP.synchronize();
 	//pick up results
 	for (int i = 0; i < count - 1; i++) {

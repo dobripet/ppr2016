@@ -3,6 +3,7 @@
 #include <amp_math.h>
 #include <iostream>
 
+#include "Statistics.h"
 //calc sqrt alpha distance
 floattype getDT(TGlucoseLevel p0, TGlucoseLevel p1) {
 	const floattype exponent = 0.25;//cetripetal => alhpa = 0.5 and sqrt => 0.5
@@ -10,7 +11,7 @@ floattype getDT(TGlucoseLevel p0, TGlucoseLevel p1) {
 	return std::pow(((p1.datetime - p0.datetime)*(p1.datetime - p0.datetime) + (p1.level - p0.level)*(p1.level - p0.level)), exponent);
 };
 //calc sqrt alpha distance
-floattype getDT(floattype x0, floattype x1, floattype y0, floattype y1) restrict(amp){
+floattype getDT(floattype x0, floattype x1, floattype y0, floattype y1) restrict(amp,cpu){
 	const floattype exponent = 0.25;//cetripetal => alhpa = 0.5 and sqrt => 0.5
 	//t{i+1} = t{i} + (sqrt((x{i+1}-x{i})^2 + (y{i+1}-y{i})^2))^alhpa
 	return concurrency::precise_math::pow(((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0)), exponent);
@@ -78,22 +79,26 @@ HRESULT CCatmullRomSpline::Approximate(TApproximationParams *params) {
 	concurrency::array_view<floattype, 1> x(count, datetimesV);
 	concurrency::array_view<cr_params, 1> parP(count - 1, par);
 	parP.discard_data();
-	concurrency::parallel_for_each(ext, [=](concurrency::index<1> idx) restrict(amp) {
+	concurrency::parallel_for_each(
+		// Define the compute domain, which is the set of threads that are created.  
+		ext,
+		// Define the code to run on each thread on the accelerator.  
+		[=](concurrency::index<1> idx) restrict(amp) 
+	{
 		int i = idx[0] + 1;
-		floattype dt0 = getDT(x[i-1], x[i], y[i-1], y[i]);
+		floattype dt0 = getDT(x[i - 1], x[i], y[i - 1], y[i]);
 		floattype dt1 = getDT(x[i], x[i + 1], y[i], y[i + 1]);
-		floattype dt2 = getDT(x[i+1], x[i + 2], y[i+1], y[i + 2]);
+		floattype dt2 = getDT(x[i + 1], x[i + 2], y[i + 1], y[i + 2]);
 		floattype tan1 = getTan(y[i - 1], y[i], y[i + 1], dt0, dt1);
 		floattype tan2 = getTan(y[i], y[i + 1], y[i + 2], dt1, dt2);
 		// a = y{i}, b = tan{1}
-		parP[i].a = y[i]; 
+		parP[i].a = y[i];
 		parP[i].b = tan1;
 		//c{i} = 3*(p{i+1}-p{i})-tan{2}-2*tan{1}
 		parP[i].c = 3 * (y[i + 1] - y[i]) - tan2 - 2 * tan1;
 		//d{i} = -2*(p{i+1}-p{i})+tan{2}+tan{1}
-		parP[i].d = -2 * (y[i + 1] -y[i]) + tan2 + tan1;
-		
-	});
+		parP[i].d = -2 * (y[i + 1] - y[i]) + tan2 + tan1;
+	});	
 	parP.synchronize();
 	//boundary, adding one identical point to head and tail
 	floattype dt0 = 1.0;
